@@ -5,8 +5,8 @@
     <title>Speed Typing Car Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
-        canvas { border: 1px solid #000; }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f0f0f0; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
@@ -18,7 +18,7 @@
                 "Exploring the vast universe, astronauts discover new planets and marvel at the beauty of distant stars.",
                 "In the quiet forest, the sound of rustling leaves and chirping birds creates a peaceful atmosphere."
             ];
-            let currentSentence = "";
+            let currentSentence = p.random(sentences); // Set once at start
             let userInput = "";
             let carX = 50;
             let carY = 500;
@@ -41,8 +41,7 @@
             let frameCount = 0; // For fire effect toggle
 
             p.setup = function() {
-                p.createCanvas(800, 600);
-                currentSentence = p.random(sentences);
+                p.createCanvas(window.innerWidth, window.innerHeight);
                 userInput = "";
                 carX = 50;
                 targetCarX = 50;
@@ -52,10 +51,10 @@
                 timer = 0;
                 cloudPositions = [[100, 80], [300, 120], [600, 100]];
                 cityCars = [[100, 450], [300, 450], [500, 450], [700, 450]];
-                randomCars = []; // Clear random cars before adding new ones
+                randomCars = [];
                 for (let i = 0; i < p.floor(p.random(3, MAX_RANDOM_CARS)); i++) {
                     let x = p.random(0, p.width - 40);
-                    let y = p.random([450, 400]);
+                    let y = p.random([p.height * 0.75, p.height * 0.67]);
                     let direction = p.random([1, -1]);
                     let color = p.random(["#C0C0C0", "#000000"]);
                     randomCars.push([x, y, direction, color]);
@@ -65,15 +64,14 @@
             p.wrapText = function(text, maxWidth) {
                 let words = text.split(" ");
                 let lines = [];
-                let currentLine = "";
-                for (let word of words) {
-                    let testLine = currentLine + word + " ";
-                    let testWidth = p.textWidth(testLine);
-                    if (testWidth <= maxWidth) {
+                let currentLine = words[0] || "";
+                for (let i = 1; i < words.length; i++) {
+                    let testLine = currentLine + " " + words[i];
+                    if (p.textWidth(testLine) <= maxWidth) {
                         currentLine = testLine;
                     } else {
                         lines.push(currentLine.trim());
-                        currentLine = word + " ";
+                        currentLine = words[i];
                     }
                 }
                 if (currentLine) lines.push(currentLine.trim());
@@ -93,57 +91,59 @@
                 p.background(skyColor);
 
                 let buildingPositions = [
-                    [0, 200, 80, 100, "#646464"], [80, 150, 80, 150, "#8B4513"],
-                    [160, 180, 80, 120, "#646464"], [240, 220, 80, 80, "#8B4513"],
-                    [320, 170, 80, 130, "#646464"], [400, 200, 100, 100, "#646464"],
-                    [480, 150, 80, 150, "#8B4513"], [560, 180, 80, 120, "#646464"],
-                    [640, 220, 80, 80, "#8B4513"], [720, 170, 80, 130, "#646464"]
+                    [0, p.height * 0.33, p.width * 0.1, p.height * 0.17, "#646464"], [p.width * 0.1, p.height * 0.25, p.width * 0.1, p.height * 0.25, "#8B4513"],
+                    [p.width * 0.2, p.height * 0.3, p.width * 0.1, p.height * 0.2, "#646464"], [p.width * 0.3, p.height * 0.37, p.width * 0.1, p.height * 0.13, "#8B4513"],
+                    [p.width * 0.4, p.height * 0.28, p.width * 0.1, p.height * 0.22, "#646464"], [p.width * 0.5, p.height * 0.33, p.width * 0.125, p.height * 0.17, "#646464"],
+                    [p.width * 0.625, p.height * 0.25, p.width * 0.1, p.height * 0.25, "#8B4513"], [p.width * 0.75, p.height * 0.3, p.width * 0.1, p.height * 0.2, "#646464"],
+                    [p.width * 0.875, p.height * 0.37, p.width * 0.1, p.height * 0.13, "#8B4513"], [p.width * 0.9, p.height * 0.28, p.width * 0.1, p.height * 0.22, "#646464"]
                 ];
                 for (let [x, y, w, h, c] of buildingPositions) {
                     p.fill(c);
                     p.rect(x, y, w, h);
-                    for (let winX = x + 10; winX < x + w - 10; winX += 20)
-                        for (let winY = y + 10; winY < y + h - 10; winY += 20)
-                            p.fill("#C8C8C8"), p.rect(winX, winY, 10, 10);
+                    for (let winX = x + w * 0.125; winX < x + w - w * 0.125; winX += w * 0.25)
+                        for (let winY = y + h * 0.1; winY < y + h - h * 0.1; winY += h * 0.2)
+                            p.fill("#C8C8C8"), p.rect(winX, winY, w * 0.125, h * 0.1);
                 }
                 let lowerBuildings = [
-                    [0, 500, 60, 80, "#646464"], [60, 480, 60, 100, "#8B4513"],
-                    [120, 510, 60, 70, "#646464"], [180, 490, 60, 90, "#8B4513"],
-                    [240, 470, 60, 110, "#646464"], [300, 500, 60, 80, "#8B4513"],
-                    [360, 480, 60, 100, "#646464"], [420, 510, 60, 70, "#8B4513"],
-                    [480, 490, 60, 90, "#646464"], [540, 470, 60, 110, "#8B4513"],
-                    [600, 500, 60, 80, "#646464"], [660, 480, 60, 100, "#8B4513"],
-                    [720, 510, 60, 70, "#646464"]
+                    [0, p.height * 0.83, p.width * 0.075, p.height * 0.13, "#646464"], [p.width * 0.075, p.height * 0.8, p.width * 0.075, p.height * 0.17, "#8B4513"],
+                    [p.width * 0.15, p.height * 0.85, p.width * 0.075, p.height * 0.12, "#646464"], [p.width * 0.225, p.height * 0.82, p.width * 0.075, p.height * 0.15, "#8B4513"],
+                    [p.width * 0.3, p.height * 0.78, p.width * 0.075, p.height * 0.18, "#646464"], [p.width * 0.375, p.height * 0.83, p.width * 0.075, p.height * 0.13, "#8B4513"],
+                    [p.width * 0.45, p.height * 0.8, p.width * 0.075, p.height * 0.17, "#646464"], [p.width * 0.525, p.height * 0.85, p.width * 0.075, p.height * 0.12, "#8B4513"],
+                    [p.width * 0.6, p.height * 0.82, p.width * 0.075, p.height * 0.15, "#646464"], [p.width * 0.675, p.height * 0.78, p.width * 0.075, p.height * 0.18, "#8B4513"],
+                    [p.width * 0.75, p.height * 0.83, p.width * 0.075, p.height * 0.13, "#646464"], [p.width * 0.825, p.height * 0.8, p.width * 0.075, p.height * 0.17, "#8B4513"],
+                    [p.width * 0.9, p.height * 0.85, p.width * 0.075, p.height * 0.12, "#646464"]
                 ];
                 for (let [x, y, w, h, c] of lowerBuildings) {
                     p.fill(c);
                     p.rect(x, y, w, h);
-                    for (let winX = x + 5; winX < x + w - 5; winX += 15)
-                        for (let winY = y + 5; winY < y + h - 5; winY += 15)
-                            p.fill("#C8C8C8"), p.rect(winX, winY, 8, 8);
+                    for (let winX = x + w * 0.083; winX < x + w - w * 0.083; winX += w * 0.25)
+                        for (let winY = y + h * 0.0625; winY < y + h - h * 0.0625; winY += h * 0.1875)
+                            p.fill("#C8C8C8"), p.rect(winX, winY, w * 0.1, h * 0.1);
                 }
 
                 p.fill("#464646");
-                p.rect(0, 450, p.width, 150);
-                p.rect(0, 400, p.width, 100);
-                for (let y = 460; y < 600; y += 50) p.stroke(255), p.line(0, y, p.width, y);
-                for (let y = 410; y < 500; y += 50) p.stroke(255), p.line(0, y, p.width, y);
+                p.rect(0, p.height * 0.75, p.width, p.height * 0.25);
+                p.rect(0, p.height * 0.67, p.width, p.height * 0.08);
+                for (let y = p.height * 0.767; y < p.height; y += p.height * 0.083) p.stroke(255), p.line(0, y, p.width, y);
+                for (let y = p.height * 0.683; y < p.height * 0.75; y += p.height * 0.083) p.stroke(255), p.line(0, y, p.width, y);
             };
 
             p.drawCar = function(x, y, color, crashed = false) {
+                let carSize = p.width * 0.05;
+                let wheelSize = carSize * 0.3;
                 if (!crashed || gameState !== "crashed") {
                     p.fill(color);
                     p.beginShape();
-                    p.vertex(x, y + 12); p.vertex(x + 40, y + 12); p.vertex(x + 30, y); p.vertex(x + 10, y);
+                    p.vertex(x, y + carSize * 0.3); p.vertex(x + carSize, y + carSize * 0.3); p.vertex(x + carSize * 0.75, y); p.vertex(x + carSize * 0.25, y);
                     p.endShape(p.CLOSE);
                     p.fill(color === "#800080" ? "#4B004B" : color === "#000000" ? "#323232" : "#00008B");
-                    p.rect(x, y + 12, 40, 10);
+                    p.rect(x, y + carSize * 0.3, carSize, carSize * 0.25);
                     p.fill("#C8C8C8");
                     p.beginShape();
-                    p.vertex(x + 15, y + 5); p.vertex(x + 25, y + 5); p.vertex(x + 25, y - 5); p.vertex(x + 15, y - 5);
+                    p.vertex(x + carSize * 0.375, y + carSize * 0.125); p.vertex(x + carSize * 0.625, y + carSize * 0.125); p.vertex(x + carSize * 0.625, y - carSize * 0.125); p.vertex(x + carSize * 0.375, y - carSize * 0.125);
                     p.endShape(p.CLOSE);
-                    p.fill(0); p.ellipse(x + 10, y + 17, 12, 12); p.ellipse(x + 30, y + 17, 12, 12);
-                    p.fill("#808080"); p.ellipse(x + 10, y + 17, 6, 6); p.ellipse(x + 30, y + 17, 6, 6);
+                    p.fill(0); p.ellipse(x + carSize * 0.25, y + carSize * 0.425, wheelSize, wheelSize); p.ellipse(x + carSize * 0.75, y + carSize * 0.425, wheelSize, wheelSize);
+                    p.fill("#808080"); p.ellipse(x + carSize * 0.25, y + carSize * 0.425, wheelSize * 0.5, wheelSize * 0.5); p.ellipse(x + carSize * 0.75, y + carSize * 0.425, wheelSize * 0.5, wheelSize * 0.5);
                 } else {
                     frameCount++;
                     let fireFactor = frameCount % 10 < 5 ? p.random(0.3, 0.7) : 0;
@@ -154,31 +154,31 @@
                     ].map(v => v.toString(16).padStart(2, '0'));
                     p.fill(`#${fireColor.join('')}`);
                     p.beginShape();
-                    p.vertex(x, y + 12); p.vertex(x + 40, y + 12); p.vertex(x + 30, y); p.vertex(x + 10, y);
+                    p.vertex(x, y + carSize * 0.3); p.vertex(x + carSize, y + carSize * 0.3); p.vertex(x + carSize * 0.75, y); p.vertex(x + carSize * 0.25, y);
                     p.endShape(p.CLOSE);
                     for (let i = 0; i < 3; i++) {
-                        let flameX = x + p.random(5, 35);
-                        let flameY = y + p.random(5, 15);
+                        let flameX = x + p.random(carSize * 0.125, carSize * 0.875);
+                        let flameY = y + p.random(carSize * 0.125, carSize * 0.375);
                         let baseColor = [255, 255, 0];
                         let tipColor = frameCount % 20 < 10 ? [255, 0, 0] : [255, 165, 0];
                         let midColor = baseColor.map((c, i) => p.floor(c + (tipColor[i] - c) * 0.5));
                         p.fill(`rgb(${midColor.join(',')})`);
                         p.beginShape();
-                        p.vertex(flameX, flameY); p.vertex(flameX + p.random(2, 8), flameY - p.random(5, 10)); p.vertex(flameX + p.random(-2, 2), flameY - p.random(7, 12));
+                        p.vertex(flameX, flameY); p.vertex(flameX + p.random(carSize * 0.05, carSize * 0.2), flameY - p.random(carSize * 0.125, carSize * 0.25)); p.vertex(flameX + p.random(-carSize * 0.05, carSize * 0.05), flameY - p.random(carSize * 0.175, carSize * 0.3));
                         p.endShape(p.CLOSE);
                         p.fill(`rgb(${tipColor.join(',')})`);
                         p.beginShape();
-                        p.vertex(flameX + p.random(2, 8), flameY - p.random(5, 10)); p.vertex(flameX + p.random(-2, 2), flameY - p.random(7, 12)); p.vertex(flameX + p.random(0, 5), flameY - p.random(8, 15));
+                        p.vertex(flameX + p.random(carSize * 0.05, carSize * 0.2), flameY - p.random(carSize * 0.125, carSize * 0.25)); p.vertex(flameX + p.random(-carSize * 0.05, carSize * 0.05), flameY - p.random(carSize * 0.175, carSize * 0.3)); p.vertex(flameX + p.random(0, carSize * 0.125), flameY - p.random(carSize * 0.2, carSize * 0.375));
                         p.endShape(p.CLOSE);
                     }
                     p.fill("#4B004B");
-                    p.rect(x, y + 12, 40, 10);
+                    p.rect(x, y + carSize * 0.3, carSize, carSize * 0.25);
                     p.fill("#C8C8C8");
                     p.beginShape();
-                    p.vertex(x + 15, y + 5); p.vertex(x + 25, y + 5); p.vertex(x + 25, y - 5); p.vertex(x + 15, y - 5);
+                    p.vertex(x + carSize * 0.375, y + carSize * 0.125); p.vertex(x + carSize * 0.625, y + carSize * 0.125); p.vertex(x + carSize * 0.625, y - carSize * 0.125); p.vertex(x + carSize * 0.375, y - carSize * 0.125);
                     p.endShape(p.CLOSE);
-                    p.fill(0); p.ellipse(x + 10, y + 17, 12, 12); p.ellipse(x + 30, y + 17, 12, 12);
-                    p.fill("#808080"); p.ellipse(x + 10, y + 17, 6, 6); p.ellipse(x + 30, y + 17, 6, 6);
+                    p.fill(0); p.ellipse(x + carSize * 0.25, y + carSize * 0.425, wheelSize, wheelSize); p.ellipse(x + carSize * 0.75, y + carSize * 0.425, wheelSize, wheelSize);
+                    p.fill("#808080"); p.ellipse(x + carSize * 0.25, y + carSize * 0.425, wheelSize * 0.5, wheelSize * 0.5); p.ellipse(x + carSize * 0.75, y + carSize * 0.425, wheelSize * 0.5, wheelSize * 0.5);
                 }
             };
 
@@ -238,70 +238,92 @@
                 p.drawBackground();
                 let sunColor = p.interpolateColor([255, 255, 0], [240, 240, 240], t);
                 p.fill(`rgb(${sunColor.join(',')})`);
-                p.ellipse(sunX, sunY, 60, 60);
+                p.ellipse(sunX, sunY, p.width * 0.075, p.width * 0.075);
                 for (let [x, y] of cloudPositions) {
                     p.fill("#F0F0F0");
-                    p.ellipse(x, y, 40, 40);
-                    p.ellipse(x + 30, y - 10, 50, 50);
-                    p.ellipse(x + 60, y, 40, 40);
+                    p.ellipse(x, y, p.width * 0.05, p.width * 0.05);
+                    p.ellipse(x + p.width * 0.0375, y - p.height * 0.0167, p.width * 0.0625, p.width * 0.0625);
+                    p.ellipse(x + p.width * 0.075, y, p.width * 0.05, p.width * 0.05);
                 }
                 let timerText = p.nf(p.max(0, TIME_LIMIT - timer), 1, 1) + "s";
                 let timerWidth = p.textWidth(timerText);
                 p.fill(128, 128, 128, 128); // Semi-transparent gray
-                p.ellipse(p.width / 2, 20, timerWidth + 20, p.textAscent() + 10); // Oval background
+                p.ellipse(p.width / 2, p.height * 0.033, timerWidth + p.width * 0.025, p.textAscent() + p.height * 0.0167); // Oval background
                 p.fill(0, 0, 255);
                 p.textAlign(p.CENTER, p.CENTER);
-                p.text(timerText, p.width / 2, 20);
-                let lines = p.wrapText(currentSentence, p.width - 100);
-                let totalHeight = lines.length * 30;
-                let startY = 100;
-                if (startY + totalHeight > 350) startY = p.max(50, 350 - totalHeight);
-                p.textSize(25); // Set font size for consistency
+                p.text(timerText, p.width / 2, p.height * 0.033);
+                let padding = 0.15; // Increased to 15% padding from all edges
+                let maxTextWidth = p.width * (1 - 2 * padding);
+                let maxTextHeight = p.height * (1 - 2 * padding - 0.6); // 60% for car, 15% top, 15% bottom
+                let lines = p.wrapText(currentSentence, maxTextWidth);
+                let baseTextSize = p.height * 0.035; // Fixed smaller text size
+                p.textSize(baseTextSize);
+                let maxLines = 0;
+                let longestSentence = "";
+                for (let sentence of sentences) {
+                    let testLines = p.wrapText(sentence, maxTextWidth);
+                    if (testLines.length > maxLines) {
+                        maxLines = testLines.length;
+                        longestSentence = sentence;
+                    }
+                }
+                let testWidth = p.textWidth(longestSentence);
+                if (testWidth > maxTextWidth || lines.length * baseTextSize * 1.2 > maxTextHeight) {
+                    let widthFactor = maxTextWidth / testWidth;
+                    let heightFactor = maxTextHeight / (maxLines * baseTextSize * 1.2);
+                    baseTextSize = p.min(baseTextSize * widthFactor, baseTextSize * heightFactor);
+                }
+                let lineSpacing = baseTextSize * 1.2;
+                let startY = p.height * padding; // Adjusted startY based on new padding
+                p.textSize(baseTextSize);
+                p.textAlign(p.CENTER, p.TOP);
                 let globalIndex = 0;
                 let sentenceIndex = 0;
                 for (let i = 0; i < lines.length; i++) {
-                    let yOffset = startY + i * 30;
+                    let yOffset = startY + i * lineSpacing;
+                    if (yOffset + baseTextSize > p.height * (padding + 0.3)) break; // Limit text to top 30%
                     let line = lines[i];
+                    p.fill("#000000"); // Reset fill for each line
                     for (let j = 0; j < line.length; j++) {
                         let char = line[j];
-                        // Calculate the correct position in the original sentence
                         while (sentenceIndex < currentSentence.length && currentSentence[sentenceIndex] !== char) {
-                            sentenceIndex++; // Skip spaces or other characters not in the line
+                            sentenceIndex++;
                         }
                         if (sentenceIndex < currentSentence.length) {
                             if (sentenceIndex < userInput.length) {
                                 p.fill(userInput[sentenceIndex] === char ? "#FFFF00" : "#FF0000");
                             } else {
-                                p.fill("#000000"); // Default color for untyped characters
+                                p.fill("#000000");
                             }
-                            p.text(char, p.width / 2 - ((line.length * 12) / 2) + j * 12, yOffset);
+                            p.text(char, p.width / 2 + (j - (line.length / 2)) * (baseTextSize * 0.6), yOffset);
                             sentenceIndex++;
                         }
                         globalIndex++;
                     }
                 }
+                carY = p.height * (0.75 + padding); // Adjusted carY to account for new padding
                 p.drawCar(carX, carY, "#800080", gameState === "crashed");
                 for (let [x, y] of cityCars) p.drawCar(x, y, cityCars.indexOf([x, y]) % 2 === 0 ? "#C0C0C0" : "#000000");
                 for (let [x, y, _, c] of randomCars) p.drawCar(x, y, c);
                 if (gameState === "crashed" || gameState === "won" || gameState === "timed_out") {
                     let messages = [];
-                    if (gameState === "crashed") messages.push(["Game Over!", "#FF7F50", 50]);
-                    else if (gameState === "won") messages.push(["You Win!", "#000000", 35]);
-                    else if (gameState === "timed_out") messages.push(["Time's Up!", "#FF7F50", 50]);
-                    messages.push([`WPM: ${p.nf(wpm, 1, 1)}`, "#000000", 35]);
-                    messages.push(["Press R to Restart", "#000000", 25]);
-                    let totalHeight = messages.length * 35 + (messages.length - 1) * 10;
-                    let startY = (p.height - totalHeight) / 2 + 50;
+                    if (gameState === "crashed") messages.push(["Game Over!", "#FF7F50", p.height * 0.083]);
+                    else if (gameState === "won") messages.push(["You Win!", "#000000", p.height * 0.058]);
+                    else if (gameState === "timed_out") messages.push(["Time's Up!", "#FF7F50", p.height * 0.083]);
+                    messages.push([`WPM: ${p.nf(wpm, 1, 1)}`, "#000000", p.height * 0.058]);
+                    messages.push(["Press R to Restart", "#000000", p.height * 0.0417]);
+                    let totalHeight = messages.length * p.height * 0.058 + (messages.length - 1) * p.height * 0.0167;
+                    let startY = (p.height - totalHeight) / 2 + p.height * 0.083;
                     for (let i = 0; i < messages.length; i++) {
                         let [text, color, size] = messages[i];
                         p.textSize(size);
                         let tw = p.textWidth(text);
                         if (text === "Game Over!" || text === "Time's Up!") {
                             p.fill(0, 128);
-                            p.rect(p.width / 2 - tw / 2 - 10, startY + i * 45 - size / 2, tw + 20, size + 10);
+                            p.rect(p.width / 2 - tw / 2 - p.width * 0.0125, startY + i * p.height * 0.075 - size / 2, tw + p.width * 0.025, size + p.height * 0.0167);
                         }
                         p.fill(color);
-                        p.text(text, p.width / 2, startY + i * 45);
+                        p.text(text, p.width / 2, startY + i * p.height * 0.075);
                     }
                 }
             };
@@ -319,6 +341,11 @@
                 } else if (p.key === "r" && (gameState === "crashed" || gameState === "won" || gameState === "timed_out")) {
                     p.setup(); // Reset the game state
                 }
+            };
+
+            p.windowResized = function() {
+                p.resizeCanvas(window.innerWidth, window.innerHeight);
+                p.setup(); // Reset game elements on resize
             };
         }, document.body);
 
