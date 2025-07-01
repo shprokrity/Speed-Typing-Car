@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Speed Typing Car Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
+        canvas { border: 1px solid #000; }
+    </style>
+</head>
+<body>
+    <script>
+        let myp5 = new p5(p => {
+            let sentences = [
+                "The sun sets slowly behind the mountain, casting a warm golden glow over the serene valley below.",
+                "A skilled programmer writes code that is both efficient and easy to understand for future developers.",
+                "Exploring the vast universe, astronauts discover new planets and marvel at the beauty of distant stars.",
+                "In the quiet forest, the sound of rustling leaves and chirping birds creates a peaceful atmosphere."
+            ];
+            let currentSentence = "";
+            let userInput = "";
+            let carX = 50;
+            let carY = 500;
+            let targetCarX = 50;
+            let carSpeed = 0;
+            let startTime = 0;
+            let gameState = "playing";
+            let wpm = 0;
+            let timer = 0;
+            let TIME_LIMIT = 30;
+            let cloudPositions = [[100, 80], [300, 120], [600, 100]];
+            let cloudBaseSpeed = 0.5;
+            let cityCars = [[100, 450], [300, 450], [500, 450], [700, 450]];
+            let cityCarSpeed = 1.0;
+            let randomCars = [];
+            let MAX_RANDOM_CARS = 6;
+            let sunX = 50;
+            let sunY = 70;
+            let SMOOTHING_FACTOR = 0.1;
+            let frameCount = 0; // For fire effect toggle
+
+            p.setup = function() {
+                p.createCanvas(800, 600);
+                currentSentence = p.random(sentences);
+                userInput = "";
+                carX = 50;
+                targetCarX = 50;
+                startTime = p.millis() / 1000;
+                gameState = "playing";
+                wpm = 0;
+                timer = 0;
+                cloudPositions = [[100, 80], [300, 120], [600, 100]];
+                cityCars = [[100, 450], [300, 450], [500, 450], [700, 450]];
+                randomCars = []; // Clear random cars before adding new ones
+                for (let i = 0; i < p.floor(p.random(3, MAX_RANDOM_CARS)); i++) {
+                    let x = p.random(0, p.width - 40);
+                    let y = p.random([450, 400]);
+                    let direction = p.random([1, -1]);
+                    let color = p.random(["#C0C0C0", "#000000"]);
+                    randomCars.push([x, y, direction, color]);
+                }
+            };
+
+            p.wrapText = function(text, maxWidth) {
+                let words = text.split(" ");
+                let lines = [];
+                let currentLine = "";
+                for (let word of words) {
+                    let testLine = currentLine + word + " ";
+                    let testWidth = p.textWidth(testLine);
+                    if (testWidth <= maxWidth) {
+                        currentLine = testLine;
+                    } else {
+                        lines.push(currentLine.trim());
+                        currentLine = word + " ";
+                    }
+                }
+                if (currentLine) lines.push(currentLine.trim());
+                return lines;
+            };
+
+            p.interpolateColor = function(startColor, endColor, t) {
+                let r = p.floor(startColor[0] + (endColor[0] - startColor[0]) * t);
+                let g = p.floor(startColor[1] + (endColor[1] - startColor[1]) * t);
+                let b = p.floor(startColor[2] + (endColor[2] - startColor[2]) * t);
+                return [r, g, b];
+            };
+
+            p.drawBackground = function() {
+                let t = p.min(timer / TIME_LIMIT, 1.0);
+                let skyColor = p.interpolateColor([135, 206, 235], [255, 165, 0], t);
+                p.background(skyColor);
+
+                let buildingPositions = [
+                    [0, 200, 80, 100, "#646464"], [80, 150, 80, 150, "#8B4513"],
+                    [160, 180, 80, 120, "#646464"], [240, 220, 80, 80, "#8B4513"],
+                    [320, 170, 80, 130, "#646464"], [400, 200, 100, 100, "#646464"],
+                    [480, 150, 80, 150, "#8B4513"], [560, 180, 80, 120, "#646464"],
+                    [640, 220, 80, 80, "#8B4513"], [720, 170, 80, 130, "#646464"]
+                ];
+                for (let [x, y, w, h, c] of buildingPositions) {
+                    p.fill(c);
+                    p.rect(x, y, w, h);
+                    for (let winX = x + 10; winX < x + w - 10; winX += 20)
+                        for (let winY = y + 10; winY < y + h - 10; winY += 20)
+                            p.fill("#C8C8C8"), p.rect(winX, winY, 10, 10);
+                }
+                let lowerBuildings = [
+                    [0, 500, 60, 80, "#646464"], [60, 480, 60, 100, "#8B4513"],
+                    [120, 510, 60, 70, "#646464"], [180, 490, 60, 90, "#8B4513"],
+                    [240, 470, 60, 110, "#646464"], [300, 500, 60, 80, "#8B4513"],
+                    [360, 480, 60, 100, "#646464"], [420, 510, 60, 70, "#8B4513"],
+                    [480, 490, 60, 90, "#646464"], [540, 470, 60, 110, "#8B4513"],
+                    [600, 500, 60, 80, "#646464"], [660, 480, 60, 100, "#8B4513"],
+                    [720, 510, 60, 70, "#646464"]
+                ];
+                for (let [x, y, w, h, c] of lowerBuildings) {
+                    p.fill(c);
+                    p.rect(x, y, w, h);
+                    for (let winX = x + 5; winX < x + w - 5; winX += 15)
+                        for (let winY = y + 5; winY < y + h - 5; winY += 15)
+                            p.fill("#C8C8C8"), p.rect(winX, winY, 8, 8);
+                }
+
+                p.fill("#464646");
+                p.rect(0, 450, p.width, 150);
+                p.rect(0, 400, p.width, 100);
+                for (let y = 460; y < 600; y += 50) p.stroke(255), p.line(0, y, p.width, y);
+                for (let y = 410; y < 500; y += 50) p.stroke(255), p.line(0, y, p.width, y);
+            };
+
+            p.drawCar = function(x, y, color, crashed = false) {
+                if (!crashed || gameState !== "crashed") {
+                    p.fill(color);
+                    p.beginShape();
+                    p.vertex(x, y + 12); p.vertex(x + 40, y + 12); p.vertex(x + 30, y); p.vertex(x + 10, y);
+                    p.endShape(p.CLOSE);
+                    p.fill(color === "#800080" ? "#4B004B" : color === "#000000" ? "#323232" : "#00008B");
+                    p.rect(x, y + 12, 40, 10);
+                    p.fill("#C8C8C8");
+                    p.beginShape();
+                    p.vertex(x + 15, y + 5); p.vertex(x + 25, y + 5); p.vertex(x + 25, y - 5); p.vertex(x + 15, y - 5);
+                    p.endShape(p.CLOSE);
+                    p.fill(0); p.ellipse(x + 10, y + 17, 12, 12); p.ellipse(x + 30, y + 17, 12, 12);
+                    p.fill("#808080"); p.ellipse(x + 10, y + 17, 6, 6); p.ellipse(x + 30, y + 17, 6, 6);
+                } else {
+                    frameCount++;
+                    let fireFactor = frameCount % 10 < 5 ? p.random(0.3, 0.7) : 0;
+                    let fireColor = [
+                        p.constrain(p.floor(parseInt("80", 16) + (parseInt("FF", 16) - parseInt("80", 16)) * fireFactor + (parseInt("FF", 16) - parseInt("80", 16)) * fireFactor * 0.5), 0, 255),
+                        p.constrain(p.floor(0 + (parseInt("A5", 16) - 0) * fireFactor + (0 - 0) * fireFactor * 0.5), 0, 255),
+                        p.constrain(p.floor(128 + (0 - 128) * fireFactor + (0 - 128) * fireFactor * 0.5), 0, 255)
+                    ].map(v => v.toString(16).padStart(2, '0'));
+                    p.fill(`#${fireColor.join('')}`);
+                    p.beginShape();
+                    p.vertex(x, y + 12); p.vertex(x + 40, y + 12); p.vertex(x + 30, y); p.vertex(x + 10, y);
+                    p.endShape(p.CLOSE);
+                    for (let i = 0; i < 3; i++) {
+                        let flameX = x + p.random(5, 35);
+                        let flameY = y + p.random(5, 15);
+                        let baseColor = [255, 255, 0];
+                        let tipColor = frameCount % 20 < 10 ? [255, 0, 0] : [255, 165, 0];
+                        let midColor = baseColor.map((c, i) => p.floor(c + (tipColor[i] - c) * 0.5));
+                        p.fill(`rgb(${midColor.join(',')})`);
+                        p.beginShape();
+                        p.vertex(flameX, flameY); p.vertex(flameX + p.random(2, 8), flameY - p.random(5, 10)); p.vertex(flameX + p.random(-2, 2), flameY - p.random(7, 12));
+                        p.endShape(p.CLOSE);
+                        p.fill(`rgb(${tipColor.join(',')})`);
+                        p.beginShape();
+                        p.vertex(flameX + p.random(2, 8), flameY - p.random(5, 10)); p.vertex(flameX + p.random(-2, 2), flameY - p.random(7, 12)); p.vertex(flameX + p.random(0, 5), flameY - p.random(8, 15));
+                        p.endShape(p.CLOSE);
+                    }
+                    p.fill("#4B004B");
+                    p.rect(x, y + 12, 40, 10);
+                    p.fill("#C8C8C8");
+                    p.beginShape();
+                    p.vertex(x + 15, y + 5); p.vertex(x + 25, y + 5); p.vertex(x + 25, y - 5); p.vertex(x + 15, y - 5);
+                    p.endShape(p.CLOSE);
+                    p.fill(0); p.ellipse(x + 10, y + 17, 12, 12); p.ellipse(x + 30, y + 17, 12, 12);
+                    p.fill("#808080"); p.ellipse(x + 10, y + 17, 6, 6); p.ellipse(x + 30, y + 17, 6, 6);
+                }
+            };
+
+            p.calculateWPM = function() {
+                let elapsedTime = p.min((p.millis() / 1000) - startTime, TIME_LIMIT);
+                if (elapsedTime > 0 && gameState === "playing") {
+                    let correctLength = 0;
+                    for (let i = 0; i < p.min(userInput.length, currentSentence.length); i++)
+                        if (userInput[i] === currentSentence[i]) correctLength++;
+                    let estimatedWords = correctLength / 5;
+                    wpm = (estimatedWords / elapsedTime) * 60;
+                } else if (gameState === "crashed" || gameState === "won" || gameState === "timed_out") {
+                    let correctLength = 0;
+                    for (let i = 0; i < p.min(userInput.length, currentSentence.length); i++)
+                        if (userInput[i] === currentSentence[i]) correctLength++;
+                    let estimatedWords = correctLength / 5;
+                    wpm = elapsedTime > 0 ? (estimatedWords / elapsedTime) * 60 : 0;
+                }
+                return p.max(0, wpm);
+            };
+
+            p.updateLoop = function() {
+                if (gameState === "playing") {
+                    timer = (p.millis() / 1000) - startTime;
+                    if (timer >= TIME_LIMIT) {
+                        gameState = "timed_out";
+                        wpm = p.calculateWPM();
+                        return;
+                    }
+                    let progress = userInput.length / currentSentence.length || 0;
+                    targetCarX = 50 + progress * (p.width - 130);
+                    carX += (targetCarX - carX) * SMOOTHING_FACTOR;
+                    wpm = p.calculateWPM();
+                    let dynamicCloudSpeed = cloudBaseSpeed + wpm * 0.05;
+                    let dynamicCityCarSpeed = cityCarSpeed + wpm * 0.1;
+                    cloudPositions = cloudPositions.map(([x, y]) => [(x + dynamicCloudSpeed) % p.width, y]);
+                    cityCars = cityCars.map(([x, y]) => [(x - dynamicCityCarSpeed + p.width) % p.width, y]);
+                    randomCars = randomCars.map(([x, y, dx, c]) => [
+                        (x + dx * 2 + p.width) % p.width, y, dx, c
+                    ]);
+                    if (userInput && userInput !== currentSentence.slice(0, userInput.length)) {
+                        gameState = "crashed";
+                        wpm = p.calculateWPM();
+                    }
+                    if (userInput === currentSentence) {
+                        gameState = "won";
+                        wpm = p.calculateWPM();
+                    }
+                }
+            };
+
+            p.draw = function() {
+                p.updateLoop();
+                let t = p.min(timer / TIME_LIMIT, 1.0);
+                let skyColor = p.interpolateColor([135, 206, 235], [255, 165, 0], t);
+                p.background(skyColor);
+                p.drawBackground();
+                let sunColor = p.interpolateColor([255, 255, 0], [240, 240, 240], t);
+                p.fill(`rgb(${sunColor.join(',')})`);
+                p.ellipse(sunX, sunY, 60, 60);
+                for (let [x, y] of cloudPositions) {
+                    p.fill("#F0F0F0");
+                    p.ellipse(x, y, 40, 40);
+                    p.ellipse(x + 30, y - 10, 50, 50);
+                    p.ellipse(x + 60, y, 40, 40);
+                }
+                let timerText = p.nf(p.max(0, TIME_LIMIT - timer), 1, 1) + "s";
+                let timerWidth = p.textWidth(timerText);
+                p.fill(128, 128, 128, 128); // Semi-transparent gray
+                p.ellipse(p.width / 2, 20, timerWidth + 20, p.textAscent() + 10); // Oval background
+                p.fill(0, 0, 255);
+                p.textAlign(p.CENTER, p.CENTER);
+                p.text(timerText, p.width / 2, 20);
+                let lines = p.wrapText(currentSentence, p.width - 100);
+                let totalHeight = lines.length * 30;
+                let startY = 100;
+                if (startY + totalHeight > 350) startY = p.max(50, 350 - totalHeight);
+                p.textSize(25); // Set font size for consistency
+                let globalIndex = 0;
+                let sentenceIndex = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    let yOffset = startY + i * 30;
+                    let line = lines[i];
+                    for (let j = 0; j < line.length; j++) {
+                        let char = line[j];
+                        // Calculate the correct position in the original sentence
+                        while (sentenceIndex < currentSentence.length && currentSentence[sentenceIndex] !== char) {
+                            sentenceIndex++; // Skip spaces or other characters not in the line
+                        }
+                        if (sentenceIndex < currentSentence.length) {
+                            if (sentenceIndex < userInput.length) {
+                                p.fill(userInput[sentenceIndex] === char ? "#FFFF00" : "#FF0000");
+                            } else {
+                                p.fill("#000000"); // Default color for untyped characters
+                            }
+                            p.text(char, p.width / 2 - ((line.length * 12) / 2) + j * 12, yOffset);
+                            sentenceIndex++;
+                        }
+                        globalIndex++;
+                    }
+                }
+                p.drawCar(carX, carY, "#800080", gameState === "crashed");
+                for (let [x, y] of cityCars) p.drawCar(x, y, cityCars.indexOf([x, y]) % 2 === 0 ? "#C0C0C0" : "#000000");
+                for (let [x, y, _, c] of randomCars) p.drawCar(x, y, c);
+                if (gameState === "crashed" || gameState === "won" || gameState === "timed_out") {
+                    let messages = [];
+                    if (gameState === "crashed") messages.push(["Game Over!", "#FF7F50", 50]);
+                    else if (gameState === "won") messages.push(["You Win!", "#000000", 35]);
+                    else if (gameState === "timed_out") messages.push(["Time's Up!", "#FF7F50", 50]);
+                    messages.push([`WPM: ${p.nf(wpm, 1, 1)}`, "#000000", 35]);
+                    messages.push(["Press R to Restart", "#000000", 25]);
+                    let totalHeight = messages.length * 35 + (messages.length - 1) * 10;
+                    let startY = (p.height - totalHeight) / 2 + 50;
+                    for (let i = 0; i < messages.length; i++) {
+                        let [text, color, size] = messages[i];
+                        p.textSize(size);
+                        let tw = p.textWidth(text);
+                        if (text === "Game Over!" || text === "Time's Up!") {
+                            p.fill(0, 128);
+                            p.rect(p.width / 2 - tw / 2 - 10, startY + i * 45 - size / 2, tw + 20, size + 10);
+                        }
+                        p.fill(color);
+                        p.text(text, p.width / 2, startY + i * 45);
+                    }
+                }
+            };
+
+            p.keyPressed = function() {
+                if (gameState === "playing") {
+                    if (p.keyCode === p.BACKSPACE) userInput = userInput.slice(0, -1);
+                    else if (p.keyCode === p.ENTER && userInput === currentSentence) {
+                        gameState = "won";
+                        wpm = p.calculateWPM();
+                    } else if (p.key.length === 1) {
+                        userInput += p.key;
+                        p.updateLoop();
+                    }
+                } else if (p.key === "r" && (gameState === "crashed" || gameState === "won" || gameState === "timed_out")) {
+                    p.setup(); // Reset the game state
+                }
+            };
+        }, document.body);
+
+        console.log("p5.js loaded:", typeof p5 !== 'undefined' && p5);
+    </script>
+</body>
+</html>
